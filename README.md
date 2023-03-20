@@ -18,6 +18,6 @@ Vinit Chandak (2022EET2109)
    - Github repository for the project  
 - Release for this milestone: "Milestone 1"  
   Contents:  
-    - ER Diagram  
+    - ER Diagrams  
     - Database_structure.sql(current, might change)  
     - Report for 1st milestone which contains ERDs, FDs, Normalization and Schema.  
