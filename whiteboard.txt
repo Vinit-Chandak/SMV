@@ -1,0 +1,53 @@
+Write anything and everthing. Steps to do/set-up everythning, changes made, features added or want to add. 
+
+Milestone 1:
+	Done
+
+Milestone 2:
+
+
+
+
+Github:
+	Clone repo: 							git clone https://github.com/Vinit-Chandak/SMV
+	Switch to different milestones/main: 	git checkout -b milestone1
+	stage changes: 							git add .
+	commit changes: 						git commit -m "what changes were made, message"
+	push changes: 							git push
+	regularly pull changes:					git pull
+	merge milestones: 						git merge milestone1
+
+
+
+
+Ui/Ux:
+
+
+
+
+
+Database:
+
+
+
+
+Setup:
+	Install python
+	
+	Set up a virtual environment if wanted:
+		pip install virtualenv
+		in projects root directory: virtualenv venv
+		activate venvm: windows - .\venv\Scripts\activate, mac/linux - source venv/bin/activate
+		deactivate venvm: deactivate
+		add venv to .gitignore
+	
+	install delpendencies from requirements.txt
+	How to create requirements.txt?
+		pip freeze > requirements.txt
+			This command will generate a list of all the installed packages in your current virtual environment (or system Python installation if not using a virtual environment), along with their version numbers, and save this list to a file named requirements.txt.
+		or add manually, find versions using pip freeze
+
+
+
+
+	pip install Flask Flask-SQLAlchemy psycopg2 requests plotly
