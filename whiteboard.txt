@@ -4,7 +4,10 @@ Milestone 1:
 	Done
 
 Milestone 2:
-
+	data dump? - Done
+	queries?
+	indexes?
+	performance metrics?
 
 
 
@@ -27,6 +30,9 @@ Ui/Ux:
 
 
 Database:
+	url: http://10.17.50.91:5000/
+	usename: group_13
+	password: QcNtcHm7Hmqg9q
 
 
 
@@ -47,7 +53,8 @@ Setup:
 			This command will generate a list of all the installed packages in your current virtual environment (or system Python installation if not using a virtual environment), along with their version numbers, and save this list to a file named requirements.txt.
 		or add manually, find versions using pip freeze
 
-
-
-
 	pip install Flask Flask-SQLAlchemy psycopg2 requests plotly
+
+	Run the application:
+		python app.py
+		http://127.0.0.1:5000/
