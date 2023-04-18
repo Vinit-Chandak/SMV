@@ -124,4 +124,31 @@ CREATE TABLE AQI(
 	REFERENCES Cities(City, State)
 );
 
+CREATE INDEX idx_state_subdivision_subdivision_state ON state_subdivision(subdivision, state);
+
+CREATE INDEX avg_temp_state_idx on average_temperature(state);
+CREATE INDEX avg_temp_year_idx on average_temperature(year);
+CREATE INDEX avg_temp_state_year_idx on average_temperature(state, year);
+
+CREATE INDEX rainfall_subdiv_idx on rainfall(subdivision);
+CREATE INDEX rainfall_year_idx on rainfall(year);
+CREATE INDEX rainfall_state_idx on rainfall(state);
+CREATE INDEX rainfall_state_year_idx on rainfall(state, year);
+CREATE INDEX idx_rainfall_subdivision_annual_year ON rainfall(subdivision, annual, year);
+
+CREATE INDEX state_co2_state_idx ON state_co2(state);
+CREATE INDEX state_co2_year_idx ON state_co2(year);
+CREATE INDEX state_co2_state_year_idx ON state_co2(state, year);
+
+CREATE INDEX sealevel_state_idx ON sealevel(state);
+CREATE INDEX sealevel_year_idx ON sealevel(year);
+CREATE INDEX sealevel_city_idx ON sealevel(sea_shore_city);
+CREATE INDEX idx_sealevel_state_year_monthly_msl ON sealevel(state, year, monthly_msl);
+
+CREATE INDEX aqi_state_idx ON aqi(state);
+CREATE INDEX aqi_city_idx ON aqi(city);
+CREATE INDEX aqi_year_idx ON aqi(year);
+CREATE INDEX aqi_date_idx ON aqi(date);
+CREATE INDEX co2_year_idx ON co2(year);
+
 END TRANSACTION;

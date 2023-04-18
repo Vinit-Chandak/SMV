@@ -13,13 +13,15 @@ Milestone 2:
 
 Github:
 	Clone repo: 							git clone https://github.com/Vinit-Chandak/SMV
-	Switch to different milestones/main: 	git checkout -b milestone1
+	Switch to different milestones/main: 	git checkout -b breanch_name
 	stage changes: 							git add .
 	commit changes: 						git commit -m "what changes were made, message"
 	push changes: 							git push
 	regularly pull changes:					git pull
-	merge milestones: 						git merge milestone1
-
+	merge branches: 						git merge branch_name
+	delete branch:							git branch --delete branch_name
+	see all branches:						git branch -a
+	
 
 
 
