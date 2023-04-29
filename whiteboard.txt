@@ -78,6 +78,9 @@ Local Database:
 	
 	Dump database:
 		/usr/local/pgsql/bin/pg_dump -h localhost -U postgres -f db_dump_project.sql prod
+		
+	Load dump:
+		 /usr/local/pgsql/bin/psql -U postgres -W -f triggers_dump.sql prod
 
 	Reset database:
 		DROP SCHEMA public CASCADE;
@@ -256,7 +259,38 @@ Database Features Implemented:
 	6. Trigger for auto updates.
 	7. Logging - Created a log table which tracks changes in the average_temperature table.
 	8. Trigger for logging.
-	9. Stored procedures - ?
+	9. Materialized Views.
+		
+		Created a materialized view to display the total CO2 emissions for each state.
+		
+		CREATE MATERIALIZED VIEW total_state_co2_emissions AS
+		SELECT State, SUM(CO2_Emissions) as total_co2_emissions
+		FROM State_CO2
+		GROUP BY State;
+		
+		
+		Created a materialized view that'll keep tab on all the cities where aqi quality bucket has been "Very Poor" in the past decade.
+		
+		CREATE MATERIALIZED VIEW severe_aqi_cities_past_decade AS
+		SELECT
+			City,
+			State,
+			COUNT(*) AS num_severe_days
+		FROM
+			AQI
+		WHERE
+			AQI_Bucket = 'Very Poor'
+			AND Date >= (current_date - INTERVAL '10 years')
+		GROUP BY
+			City, State
+		HAVING
+			COUNT(*) > 0
+		ORDER BY
+			num_severe_days DESC;
+		
+		REFRESH MATERIALIZED VIEW severe_aqi_cities_past_decade;
+
+	10. 	
 	
 	
 	

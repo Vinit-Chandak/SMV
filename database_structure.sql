@@ -48,7 +48,7 @@ CREATE TABLE State_CO2(
 DROP TABLE IF EXISTS Average_Temoerature;
 CREATE TABLE Average_Temperature(
 	Average_Temperature numeric(6, 3) DEFAULT NULL,
-	Average_Temperature_Uncertainity numeric(5, 3) DEFAULT NULL,
+	Average_Temperature_Uncertainty numeric(5, 3) DEFAULT NULL,
 	State varchar(30),
 	Month varchar(15),
 	Year int,
@@ -164,6 +164,138 @@ CREATE INDEX aqi_date_idx ON aqi(date);
 
 CREATE INDEX co2_year_idx ON co2(year);
 CREATE INDEX co2_per_capita_idx ON co2(Co2_per_capita);
+
+CREATE OR REPLACE FUNCTION check_valid_temperature()
+RETURNS TRIGGER AS $$
+BEGIN
+IF NEW.Average_Temperature < -273.15 THEN
+	RAISE EXCEPTION 'Invalid temperature value: below absolute zero.';
+END IF;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_valid_temperature
+BEFORE INSERT OR UPDATE ON Average_Temperature
+FOR EACH ROW
+EXECUTE PROCEDURE check_valid_temperature();
+
+CREATE OR REPLACE FUNCTION update_state_capital()
+RETURNS TRIGGER AS $$
+BEGIN
+-- Check if the capital has changed
+IF OLD.Capital <> NEW.Capital THEN
+	-- Update the capital in the Cities table
+	UPDATE Cities
+	SET City = NEW.Capital
+	WHERE City = OLD.Capital
+	AND State = NEW.State;
+
+	-- Update the capital in the Sealevel table
+	UPDATE Sealevel
+	SET Sea_Shore_City = NEW.Capital
+	WHERE Sea_Shore_City = OLD.Capital
+	AND State = NEW.State;
+END IF;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_state_capital
+AFTER UPDATE ON States
+FOR EACH ROW
+EXECUTE PROCEDURE update_state_capital();
+
+CREATE OR REPLACE FUNCTION calculate_annual_quarterly_rainfall()
+RETURNS TRIGGER AS $$
+BEGIN
+	-- Calculate Annual rainfall
+	NEW.Annual = COALESCE(NEW.January, 0) + COALESCE(NEW.February, 0) + COALESCE(NEW.March, 0) + COALESCE(NEW.April, 0)
+				+ COALESCE(NEW.May, 0) + COALESCE(NEW.June, 0) + COALESCE(NEW.July, 0) + COALESCE(NEW.August, 0)
+				+ COALESCE(NEW.September, 0) + COALESCE(NEW.October, 0) + COALESCE(NEW.November, 0) + COALESCE(NEW.December, 0);
+
+	-- Calculate quarterly rainfall
+	NEW.January_February = COALESCE(NEW.January, 0) + COALESCE(NEW.February, 0);
+	NEW.March_May = COALESCE(NEW.March, 0) + COALESCE(NEW.April, 0) + COALESCE(NEW.May, 0);
+	NEW.June_September = COALESCE(NEW.June, 0) + COALESCE(NEW.July, 0) + COALESCE(NEW.August, 0) + COALESCE(NEW.September, 0);
+	NEW.October_December = COALESCE(NEW.October, 0) + COALESCE(NEW.November, 0) + COALESCE(NEW.December, 0);
+
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_calculate_annual_quarterly_rainfall
+BEFORE INSERT OR UPDATE ON Rainfall
+FOR EACH ROW
+EXECUTE PROCEDURE calculate_annual_quarterly_rainfall();
+
+CREATE TABLE average_temperature_audit (
+	audit_id SERIAL PRIMARY KEY,
+	operation VARCHAR(10) NOT NULL,
+	state VARCHAR(30),
+	month VARCHAR(15),
+	year INT,
+	old_avg_temperature NUMERIC(6, 3),
+	new_avg_temperature NUMERIC(6, 3),
+	old_avg_temperature_uncertainty NUMERIC(5, 3),
+	new_avg_temperature_uncertainty NUMERIC(5, 3),
+	changed_by VARCHAR(100) NOT NULL,
+	changed_at TIMESTAMP NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION average_temperature_audit_trigger_func()
+RETURNS TRIGGER AS $$
+BEGIN
+	IF TG_OP = 'UPDATE' THEN
+		INSERT INTO average_temperature_audit (
+			operation, state, month, year,
+			old_avg_temperature, new_avg_temperature,
+			old_avg_temperature_uncertainty, new_avg_temperature_uncertainty,
+			changed_by, changed_at
+		)
+		VALUES (
+			'UPDATE', NEW.state, NEW.month, NEW.year,
+			OLD.average_temperature, NEW.average_temperature,
+			OLD.average_temperature_uncertainty, NEW.average_temperature_uncertainty,
+			current_user, current_timestamp
+		);
+		RETURN NEW;
+	ELSIF TG_OP = 'DELETE' THEN
+		INSERT INTO average_temperature_audit (
+			operation, state, month, year,
+			old_avg_temperature, new_avg_temperature,
+			old_avg_temperature_uncertainty, new_avg_temperature_uncertainty,
+			changed_by, changed_at
+		)
+		VALUES (
+			'DELETE', OLD.state, OLD.month, OLD.year,
+			OLD.average_temperature, NULL,
+			OLD.average_temperature_uncertainty, NULL,
+			current_user, current_timestamp
+		);
+		RETURN OLD;
+	ELSIF TG_OP = 'INSERT' THEN
+		INSERT INTO average_temperature_audit (
+			operation, state, month, year,
+			old_avg_temperature, new_avg_temperature,
+			old_avg_temperature_uncertainty, new_avg_temperature_uncertainty,
+			changed_by, changed_at
+		)
+		VALUES (
+			'INSERT', NEW.state, NEW.month, NEW.year,
+			NULL, NEW.average_temperature,
+			NULL, NEW.average_temperature_uncertainty,
+			current_user, current_timestamp
+		);
+		RETURN NEW;
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER average_temperature_audit_trigger
+AFTER INSERT OR UPDATE OR DELETE ON average_temperature
+FOR EACH ROW
+EXECUTE PROCEDURE average_temperature_audit_trigger_func();
 
 END TRANSACTION;
 
