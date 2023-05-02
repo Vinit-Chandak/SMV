@@ -3,10 +3,25 @@
 <head>
 <title>AQI</title>
 <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script>
+$(function() {
+	$( ".startdatepick" ).datepicker();
+});
+</script>
+<script>
+  $(function() {
+    $( ".enddatepick" ).datepicker();
+  });
+  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>	
+</head>
+
 </head>
 <body>
 <br /><br />
@@ -42,6 +57,32 @@
           <input type="submit" name="submitcities" class="btn btn-info" value="Select Cities" />
         </div>
       </form>
+      <br /><br />
+      <form method="post" action="" id="daterange">
+        {{ form.hidden_tag }}
+        <label for="startdatepick">Select a Start Date</label>  
+        {{ form.startdate(class="startdatepick") }}
+        <label for="enddatepick">Select a End Date</label>  
+        {{ form.enddate(class="enddatepick") }}
+        <br /><br />
+        <div style="margin-left:105px;">
+          <input type="submit" name="submitdates" class="btn btn-info" value="Select Date Range" />
+        </div>
+      </form>
+      <br /><br />
+      <form method="post" id="multiple_select_metrics">
+        <label for="metrics">Select a Metric</label>  
+        <select name="metrics" id="metrics" class="form-control selectpicker" data-live-search="true" multiple>
+          <option value="aqi">AQI</option>
+          <option value="pm10">PM10</option>  
+          <option value="pm2_5">PM2_5</option>
+        </select>
+        <br /><br />
+        <input type="hidden" name="selectedMetrics" id="selectedMetrics" />
+        <div style="margin-left:120px;">
+          <input type="submit" name="submitmetrics" class="btn btn-info" value="Submit Metric" />
+        </div>
+      </form>
     <br />
    </div>
 </div>
@@ -55,6 +96,10 @@ $(document).ready(function(){
 
     $('#cities').change(function(){
       $('#selectedCities').val($('#cities').val());
+    });
+
+    $('#metrics').change(function(){
+      $('#selectedMetrics').val($('#metrics').val());
     });
       
     $('#multiple_select_form_state').on('submit', function(event){
@@ -91,13 +136,46 @@ $(document).ready(function(){
                 data:form_data,
                 success:function(data)
                 {
-                    //Add Logic Here
                 }
             })
         }
         else
         {
             alert("Please select City");
+            return false;
+        }
+    });
+
+    $('#daterange').on('submit', function(event){
+        event.preventDefault();
+        var form_data = $(this).serialize();
+        $.ajax({
+            url:"/ajax_dates",
+            method:"POST",
+            data:form_data,
+            success:function(data)
+            {
+            }
+        })
+    });
+
+    $('#multiple_select_metrics').on('submit', function(event){
+        event.preventDefault();
+        if($('#metrics').val() != '')
+        {
+            var form_data = $(this).serialize();
+            $.ajax({
+                url:"/ajax_metrics",
+                method:"POST",
+                data:form_data,
+                success:function(data)
+                {
+                }
+            })
+        }
+        else
+        {
+            alert("Please select Metric");
             return false;
         }
     });

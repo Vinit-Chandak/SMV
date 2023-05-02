@@ -11,9 +11,9 @@ Milestone 2:
 
 Milestone 3:
 	Final submission
-	Application front end design
-	Supported transactions
-	Overall architecture
+	Application front end design 
+	Supported transactions 
+	Overall architecture 
 	Demonstration scenario
 	It should cover all the aspects of the proposed application (full spectrum of the queries and transactions)
 
@@ -309,8 +309,38 @@ Database Features Implemented:
 	
 	
 	
-	
-	
+BEGIN;
+
+-- Insert values into States table
+INSERT INTO States (State, Capital)
+VALUES ('Maharashtra', 'Mumbai');
+
+INSERT INTO Cities (City, State)
+VALUES ('Mumbai', 'Maharashtra');
+
+INSERT INTO State_Subdivision (State, Subdivision)
+VALUES ('Maharashtra', 'SampleSubdivision');
+
+INSERT INTO State_CO2 (State, Year, CO2_Emissions)
+VALUES ('Maharashtra', 2022, 12345.67);
+
+INSERT INTO Average_Temperature (Average_Temperature, State, Month, Year)
+VALUES
+(10.123, 'Maharashtra', 'January', 2022),
+(12.345, 'Maharashtra', 'February', 2022),
+(14.567, 'Maharashtra', 'March', 2022),
+(16.789, 'Maharashtra', 'April', 2022),
+(-300, 'Maharashtra', 'May', 2022),
+(20.123, 'Maharashtra', 'June', 2022),
+(22.345, 'Maharashtra', 'July', 2022),
+(24.567, 'Maharashtra', 'August', 2022),
+(26.789, 'Maharashtra', 'September', 2022),
+(28.901, 'Maharashtra', 'October', 2022),
+(30.123, 'Maharashtra', 'November', 2022),
+(32.345, 'Maharashtra', 'December', 2022);
+
+COMMIT;
+
 	
 	
 	

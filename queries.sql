@@ -117,7 +117,7 @@
 --AQI--
 	--To populate dropdown options--
 		SELECT DISTINCT State FROM AQI;
-		SELECT DISTINCT City FROM AQI WHERE State='Gujarat';
+		SELECT DISTINCT City FROM AQI WHERE State='Delhi' OR state = "Maharashtra";
 	--For dropdown--
 		SELECT * FROM AQI WHERE State ='Gujarat';
 		SELECT * FROM AQI WHERE State='Gujarat' AND City='Ahmedabad';

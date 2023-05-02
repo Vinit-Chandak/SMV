@@ -138,6 +138,16 @@ CREATE TABLE AQI(
 	ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS weather_alerts;
+CREATE TABLE weather_alerts (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  state VARCHAR(255) NOT NULL,
+  city VARCHAR(255) NOT NULL
+);
+
+
 CREATE INDEX idx_state_subdivision_subdivision_state ON state_subdivision(subdivision, state);
 
 CREATE INDEX avg_temp_state_idx on average_temperature(state);
