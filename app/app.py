@@ -8,8 +8,10 @@ from geopy.geocoders import Nominatim
 import requests
 import datetime
 import psycopg2
-
 from send_email import send_email
+import plotly.graph_objs as go
+from plotly.offline import plot
+
 
 # Init App
 app = Flask(__name__)
@@ -43,9 +45,6 @@ except:
     print("Error: Unable to establish a connection to the database.")
 
 cur=conn.cursor()
-
-
-
 
 
 #Weather Forecast
@@ -153,6 +152,7 @@ OPENWEATHERMAP_API_KEY = "890d5f0a482da702345baf8788dd5e9a"
 
 def fetch_weather_data(city, state):
 
+    # used to convert the given city and state into latitude and longitude
     geocode_url = "https://api.openweathermap.org/geo/1.0/direct"
     location = f"{city},{state}"
     paramsgeo = {
@@ -229,6 +229,9 @@ class States(db.Model):
     capital = db.Column(db.String)
     cities = db.relationship('Cities', back_populates='state_rel')
     aqis = db.relationship('AQI', back_populates='state_rel')
+    avg_temps = db.relationship('Average_Temperature', back_populates='state_rel')
+    state_co2 = db.relationship('state_co2', back_populates='state_rel')
+
 
 class Cities(db.Model):
     __tablename__ = 'cities'
@@ -260,21 +263,21 @@ class AQI(db.Model):
             'pm2_5': self.pm2_5
         }
 
-def getstatevalues():
-    states = States.query.all()
+def get_state_values_aqi():
+    AQIstates = db.session.query(AQI.state.distinct().label("state")).all()
     result = []
-    for state in states:
-        result.append(state.state)     
+    for row in AQIstates:
+        result.append(row.state)     
     return result
 
-def getcityvaluesforselectedstates(selectedStateArray):
-    cities = Cities.query.filter(Cities.state.in_(selectedStateArray))
+def get_city_values_for_selected_states_aqi(selectedStateArray):
+    cities = db.session.query(AQI.city.distinct().label("city")).filter(AQI.state.in_(selectedStateArray)).all()
     result = []
     for city in cities:
         result.append(city.city)     
     return result
 
-def getaqiforcitiesingivendaterange():
+def get_aqi_for_cities_in_given_date_range():
     aqis = AQI.query.filter(AQI.city.in_(session.get('selectedCities')), AQI.date >= session.get('startDate'), AQI.date <= session.get('endDate'))
     result = []
     for aqi in aqis:
@@ -282,33 +285,11 @@ def getaqiforcitiesingivendaterange():
             result.append(aqi.to_dict())                  
     return result
 
-@app.route('/stateslist')
-def list_states():
-    print("Entering /states route")
-    states = States.query.all()
-    print(f"Fetched {len(states)} states from the database")
-    result = ""
-    for state in states:
-        result += f"{state.state} - {state.capital}<br>"
-    return result
-
-@app.route('/citieslist')
-def list_cities():
-    print("Entering /cities route")
-    cities = Cities.query.all()
-    print(f"Fetched {len(cities)} cities from the database")
-    result = ""
-    for city in cities:
-        result += f"{city.city} - {city.state}<br>"
-    return result
-
-
 @app.route('/aqis')
 def aqi_data():
     form = DateForm()
-    states = getstatevalues()
-    return render_template('index.html',
-                       all_states=states,form=form)
+    states = get_state_values_aqi()
+    return render_template('index.html', all_states=states,form=form)
 
 @app.route("/ajax_states",methods=["POST","GET"])
 def ajax_states():
@@ -316,7 +297,7 @@ def ajax_states():
         selectedStates = request.form['selectedStates']
         #print(selectedStates)
         selectedStates = selectedStates.split(",")
-        cities=getcityvaluesforselectedstates(selectedStates)
+        cities=get_city_values_for_selected_states_aqi(selectedStates)
         cities_list = ''
         for city in cities:
             cities_list += '<option value="{}">{}</option>'.format(city, city)
@@ -345,31 +326,308 @@ def ajax_metrics():
     if request.method == 'POST':
         metrics = request.form['selectedMetrics']
         metrics = metrics.split(",")
-        result = getaqiforcitiesingivendaterange()
+        result = get_aqi_for_cities_in_given_date_range()
         data = pd.DataFrame.from_records(result)
         if('aqi' in metrics):
-            figaqi = px.line(result, x='date', y='aqi', color='city')
+            figaqi = px.line(result, x='date', y='aqi', color='city', hover_data=['aqi_bucket'])
+            figaqi.update_traces(mode='markers+lines')
             figaqi.show()
         if('pm10' in metrics):
-            figpm10 = px.line(result, x='date', y='pm10', color='city')
+            figpm10 = px.line(result, x='date', y='pm10', color='city', hover_data=['aqi_bucket'])
+            figpm10.update_traces(mode='markers+lines')
             figpm10.show()
         if('pm2_5' in metrics):
-            fig2_5 = px.line(result, x='date', y='pm2_5', color='city')
+            fig2_5 = px.line(result, x='date', y='pm2_5', color='city', hover_data=['aqi_bucket'])
+            fig2_5.update_traces(mode='markers+lines')
             fig2_5.show() 
     return jsonify(metrics=metrics)
 
-from datetime import datetime as dt
 
-def format_datetime(value, output_format='%Y-%m-%d %H:%M:%S'):
-    input_formats = ['%d/%m/%Y %H:%M', '%H:%M']
-    for input_format in input_formats:
-        try:
-            return dt.strptime(value, input_format).strftime(output_format)
-        except ValueError:
-            pass
-    raise ValueError(f"Unable to parse timestamp '{value}'")
+#Average Temperature
+class Average_Temperature(db.Model):
+    __tablename__ = 'average_temperature'
+    state = db.Column(db.String, db.ForeignKey('states.state'), primary_key=True)
+    month = db.Column(db.String, primary_key=True)
+    year = db.Column(db.Integer, primary_key=True)
+    average_temperature = db.Column(db.Float)
+    average_temperature_uncertainty = db.Column(db.Float)
+    state_rel = db.relationship('States', back_populates='avg_temps')
 
-app.jinja_env.filters['datetime'] = format_datetime
+    def to_dict(self):
+        return {
+            'state': self.state,
+            'month': self.month,
+            'year': self.year,
+            'average_temperature': self.average_temperature,
+            'average_temperature_uncertainty': self.average_temperature_uncertainty
+        }
+
+def get_state_values_avg_temp():
+    avg_temp_states = db.session.query(Average_Temperature.state.distinct().label("state")).all()
+    result = []
+    for row in avg_temp_states:
+        result.append(row.state)     
+    return result
+
+def get_year_values_for_selected_states_avg_temp(selectedStatesArray):
+    years = db.session.query(Average_Temperature.year.distinct().label("year")).filter(Average_Temperature.state.in_(selectedStatesArray)).all()
+    result = []
+    for year in years:
+        result.append(year.year)  
+    result.sort()   
+    return result
+
+def get_month_values_for_selected_states_and_years_avg_temp(selectedYearsArray):
+    if 'all' in selectedYearsArray:
+        months = db.session.query(Average_Temperature.month.distinct().label("month")).all()
+    else:
+        months = db.session.query(Average_Temperature.month.distinct().label("month")).filter(Average_Temperature.year.in_(selectedYearsArray)).all()
+    result = []
+    month_name_to_number = {
+        'January': 1,
+        'February': 2,
+        'March': 3,
+        'April': 4,
+        'May': 5,
+        'June': 6,
+        'July': 7,
+        'August': 8,
+        'September': 9,
+        'October': 10,
+        'November': 11,
+        'December': 12
+    }
+    for month in months:
+        result.append(month.month)
+    result.sort(key=lambda month: month_name_to_number[month])
+    return result
+
+
+def get_avg_temp_for_states_in_given_year_and_month():
+    if "all" in session.get('selectedYears'):
+        session['selectedYears'] = get_year_values_for_selected_states_avg_temp(session.get('selectedStates'))
+
+    avg_temps = Average_Temperature.query.filter(Average_Temperature.state.in_(session.get('selectedStates')), Average_Temperature.year.in_(session.get('selectedYears')), Average_Temperature.month.in_(session.get('selectedMonths')))
+    result = []
+    for avg_temp in avg_temps:
+        if(avg_temp != None):
+            result.append(avg_temp.to_dict())                  
+    return result
+
+@app.route('/temperature')
+def avg_temp_data():
+    form = DateForm()
+    states = get_state_values_avg_temp()
+    return render_template('avg_temp.html', all_states=states)
+
+@app.route("/ajax_states_avg_temp",methods=["POST","GET"])
+def ajax_states_avg_temp():
+    if request.method == 'POST':
+        selectedStates = request.form['selectedStates']
+        #print(selectedStates)
+        selectedStates = selectedStates.split(",")
+        years=get_year_values_for_selected_states_avg_temp(selectedStates)
+        years_list = ''
+        session['selectedStates'] = selectedStates
+        for year in years:
+            years_list += '<option value="{}">{}</option>'.format(year, year)
+    return jsonify(years_list=years_list)
+
+@app.route("/ajax_years_avg_temp",methods=["POST","GET"])
+def ajax_years_avg_temp():
+    if request.method == 'POST':
+        selectedYears = request.form['selectedYears']
+        #print(selectedYears)
+        selectedYears = selectedYears.split(",")
+        months=get_month_values_for_selected_states_and_years_avg_temp(selectedYears)
+        months_list = ''
+        session['selectedYears'] = selectedYears
+        limit_month_dropdown = 'all' in selectedYears or len(selectedYears) > 1
+
+        for month in months:
+            months_list += '<option value="{}">{}</option>'.format(month, month)
+    return jsonify(months_list=months_list, limit_month_dropdown=limit_month_dropdown)
+
+import plotly.graph_objs as go
+import plotly.offline
+
+
+@app.route("/ajax_plot_avg_temp", methods=["POST", "GET"])
+def ajax_metrics_avg_temp():
+    if request.method == 'POST':
+        selectedMonths = request.form['selectedMonths']
+        selectedMonths = selectedMonths.split(",")
+        session['selectedMonths'] = selectedMonths
+        
+        if 'all' in selectedMonths:
+            months = get_month_values_for_selected_states_and_years_avg_temp(session.get('selectedYears'))
+            session['selectedMonths'] = months
+        
+        result = get_avg_temp_for_states_in_given_year_and_month()
+        data = pd.DataFrame.from_records(result)
+
+        # if the user has selected more than two years, group the data by year and calculate the mean temperature for each year
+        if len(session['selectedYears']) > 1:
+            data = data.groupby(['year','state'])[['average_temperature', 'average_temperature_uncertainty']].mean().reset_index()
+            print(data)
+            x_column = 'year'
+        else:
+            print(data)
+            x_column = 'month'
+        
+        figtemp = px.line(data, x=x_column, y='average_temperature', color='state', hover_data=['average_temperature_uncertainty'])
+        figtemp.update_traces(mode='markers+lines')
+        figtemp.show()
+    return jsonify(selectedMonths=selectedMonths)
+
+
+#State CO2
+class state_co2(db.Model):
+    __tablename__ = 'state_co2'
+    state = db.Column(db.String(30),db.ForeignKey('states.state'), primary_key=True)
+    year = db.Column(db.Integer, primary_key=True)
+    co2_emissions = db.Column(db.Numeric(10,2))
+    state_rel = db.relationship('States', back_populates='state_co2')
+    def to_dict(self):
+        return {
+            'state': self.state,
+            'year': self.year,
+            'co2_emissions': self.co2_emissions
+        }
+
+def get_state_values_state_co2():
+    co2_states = db.session.query(state_co2.state.distinct().label("state")).all()
+    result = []
+    for row in co2_states:
+        result.append(row.state)     
+    #print(result)
+    return result
+
+def get_year_values_for_selected_states_state_co2(selectedStatesArray):
+    years = db.session.query(state_co2.year.distinct().label("year")).filter(state_co2.state.in_(selectedStatesArray)).all()
+    result = []
+    for year in years:
+        result.append(year.year)
+    result.sort()
+    return result
+
+def get_co2_for_states_in_given_year_state_co2():
+    co2_emissions = state_co2.query.filter(state_co2.state.in_(session.get('selectedStates')), state_co2.year.in_(session.get('selectedYears')))
+    result = []
+    for co2_emission in co2_emissions:
+        if(co2_emission != None):
+            result.append(co2_emission.to_dict())                  
+    return result
+
+@app.route('/state_co2')
+def co2_data():
+    states = get_state_values_state_co2()
+    return render_template('state_co2.html', all_states=states)
+
+@app.route("/ajax_states_state_co2",methods=["POST","GET"])
+def ajax_states_state_co2():
+    if request.method == 'POST':
+        selectedStates = request.form['selectedStates']
+        selectedStates = selectedStates.split(",")
+        #print(selectedStates)
+        years=get_year_values_for_selected_states_state_co2(selectedStates)
+        #print(years)
+        years_list = ''
+        session['selectedStates'] = selectedStates
+        for year in years:
+            years_list += '<option value="{}">{}</option>'.format(year, year)
+    return jsonify(years_list=years_list)
+
+@app.route("/ajax_plot_state_co2",methods=["POST","GET"])
+def ajax_years_state_co2():
+    if request.method == 'POST':
+        selectedYears = request.form['selectedYears']
+        #print(selectedYears)
+        selectedYears = selectedYears.split(",")
+        if 'all' in selectedYears:
+            years = get_year_values_for_selected_states_state_co2(session.get('selectedStates'))
+            session['selectedYears'] = years
+        else:
+            session['selectedYears'] = selectedYears
+        result = get_co2_for_states_in_given_year_state_co2()
+        data = pd.DataFrame.from_records(result)
+        #print(data)
+        figco2 = px.line(data, x='year', y='co2_emissions', color='state')
+        figco2.update_traces(mode='markers+lines')
+        figco2.show()
+    return jsonify(selectedYears=selectedYears)
+
+
+#India CO2
+class co2(db.Model):
+    __tablename__ = 'co2'
+    year = db.Column(db.Integer, primary_key=True)
+    population = db.Column(db.Numeric(10))
+    gdp = db.Column(db.Numeric(14))
+    cement_co2_per_capita = db.Column(db.Numeric(10,3))
+    co2_including_luc_per_capita = db.Column(db.Numeric(10,3))
+    co2_per_capita = db.Column(db.Numeric(10,3))
+    coal_co2_per_capita = db.Column(db.Numeric(10,3))
+    consumption_co2_per_capita = db.Column(db.Numeric(10,3))
+    energy_per_capita = db.Column(db.Numeric(10,3))
+    flaring_co2_per_capita = db.Column(db.Numeric(10,3))
+    gas_co2_per_capita = db.Column(db.Numeric(10,3))
+    ghg_excluding_lucf_per_capita = db.Column(db.Numeric(10,3))
+    ghg_per_capita = db.Column(db.Numeric(10,3))
+    land_use_change_co2_per_capita = db.Column(db.Numeric(10,3))
+    def to_dict(self):
+        return {
+            'year': self.year,
+            'population': self.population,
+            'gdp': self.gdp,
+            'cement_co2_per_capita': self.cement_co2_per_capita,
+            'co2_including_luc_per_capita': self.co2_including_luc_per_capita,
+            'co2_per_capita': self.co2_per_capita,
+            'coal_co2_per_capita': self.coal_co2_per_capita,
+            'consumption_co2_per_capita': self.consumption_co2_per_capita,
+            'energy_per_capita': self.energy_per_capita,
+            'flaring_co2_per_capita': self.flaring_co2_per_capita,
+            'gas_co2_per_capita': self.gas_co2_per_capita,
+            'ghg_excluding_lucf_per_capita': self.ghg_excluding_lucf_per_capita,
+            'ghg_per_capita': self.ghg_per_capita,
+            'land_use_change_co2_per_capita': self.land_use_change_co2_per_capita
+        }
+
+def get_co2_data():
+    co2_emissions = co2.query.all()
+    print(co2_emissions)
+    result = []
+    for co2_emission in co2_emissions:
+        if(co2_emission != None):
+            emission_dict = co2_emission.to_dict()
+            emission_dict['population'] = float(emission_dict['population'])
+            result.append(emission_dict)
+    return result
+
+@app.route("/co2_animation")
+def co2_animation():
+    co2_data = get_co2_data()
+    df = pd.DataFrame.from_records(co2_data)
+    df['population'] = df['population'].to_numpy()
+    print(df['population'].describe())
+    
+    # create a line plot with hover data
+    fig = px.line(df, x="year", y="co2_per_capita", hover_data=df.columns)
+    
+    # update layout
+    fig.update_layout(
+        title='Per-capita CO2 Emissions in India',
+        height=800,
+        yaxis=dict(title='CO2 Per Capita'),
+        xaxis=dict(title='Year'),
+        autosize=True
+    )
+
+    plot_div = plot(fig, output_type='div', include_plotlyjs=False)
+
+    return render_template('india_co2.html', plot_div=plot_div)
+
+
 
 
 @app.route('/')

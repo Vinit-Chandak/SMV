@@ -31,7 +31,7 @@ $(function() {
    <br />
     <div class="col-md-4" style="margin-left:380px;">
       <form method="post" id="multiple_select_form_state">
-        <label for="states">Select a state</label>  
+        <label for="states">Select a State(s)</label>  
         <select name="states" id="states" class="form-control selectpicker" data-live-search="true" multiple>
             {% for state in all_states %}
             <option value="{{state}}">{{state}}</option>
@@ -45,7 +45,7 @@ $(function() {
       </form>
       <br /><br />
       <form method="post" id="multiple_select_form_city">
-        <label for="cities">Select a city</label>  
+        <label for="cities">Select a City(s)</label>  
         <select name="cities" id="cities" class="form-control selectpicker" data-live-search="true" multiple>
             {% for city in cities %}
             <option value="{{city}}">{{city}}</option>
