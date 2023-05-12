@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rainfall</title>
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script>
+$(function() {
+	$( ".startdatepick" ).datepicker();
+});
+</script>
+<script>
+  $(function() {
+    $( ".enddatepick" ).datepicker();
+  });
+  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>	
+</head>
+
+</head>
+<body>
+<br /><br />
+<div class="container">
+   <br />
+   <h2 align="center">Rainfall</h2>
+   <br />
+    <div class="col-md-4" style="margin-left:380px;">
+      <form method="post" id="multiple_select_form_state">
+        <label for="states">Select a State(s)</label>  
+        <select name="states" id="states" class="form-control selectpicker" data-live-search="true" multiple>
+            {% for state in all_states %}
+            <option value="{{state}}">{{state}}</option>
+            {% endfor %}
+        </select>
+        <br /><br />
+        <input type="hidden" name="selectedStates" id="selectedStates" />
+        <div style="margin-left:120px;">
+          <input type="submit" name="submitstates" class="btn btn-info" value="Select States" />
+        </div>
+      </form>
+      <br /><br />
+      <form method="post" id="multiple_select_form_subdivision">
+        <label for="subdivisions">Select a Subdivision(s)</label>  
+        <select name="subdivisions" id="subdivisions" class="form-control selectpicker" data-live-search="true" multiple>
+            {% for subdivision in subdivisions %}
+            <option value="{{subdivision}}">{{subdivision}}</option>
+            {% endfor %}
+        </select>
+        <br /><br />
+        <input type="hidden" name="selectedSubdivisions" id="selectedSubdivisions" />
+        <div style="margin-left:120px;">
+          <input type="submit" name="submitsubdivisions" class="btn btn-info" value="Select subdivisions" />
+        </div>
+      </form>
+      <br /><br />
+      <form method="post" id="multiple_select_year">
+        <label for="years">Select an Year</label>  
+        <select name="years" id="years" class="form-control selectpicker" data-live-search="true" multiple>
+          {% for year in years %}
+            <option value="{{year}}">{{year}}</option>
+          {% endfor %}
+        </select>
+        <br /><br />
+        <label for="months">Select a Month or a Quarter</label>  
+        <select name="months" id="months" class="form-control selectpicker" data-live-search="true">
+          <option value="january">January</option>
+          <option value="february">February</option>
+          <option value="march">March</option>
+          <option value="april">April</option>
+          <option value="may">May</option>
+          <option value="june">June</option>
+          <option value="july">July</option>
+          <option value="august">August</option>
+          <option value="september">September</option>
+          <option value="october">October</option>
+          <option value="november">November</option>
+          <option value="december">December</option>
+          <option value="january_february">First Quarter</option>
+          <option value="march_may">Second Quarter</option>
+          <option value="june_september">Third Quarter</option>
+          <option value="october_december">Fourth Quarter</option>
+          <option value="annual">Annual</option>
+        </select>
+        <br /><br />
+        <input type="hidden" name="selectedYears" id="selectedYears" />
+        <div style="margin-left:120px;">
+          <input type="submit" name="submityear" class="btn btn-info" value="Submit Year" />
+        </div>
+      </form>
+    <br />
+   </div>
+</div>
+<script>
+$(document).ready(function(){
+    $('.selectpicker').selectpicker();
+      
+    $('#states').change(function(){
+      $('#selectedStates').val($('#states').val());
+    });
+
+    $('#subdivisions').change(function(){
+      $('#selectedSubdivisions').val($('#subdivisions').val());
+    });
+
+    $('#years').change(function(){
+      $('#selectedYears').val($('#years').val());
+    });
+
+    $('#multiple_select_form_state').on('submit', function(event){
+        event.preventDefault();
+        if($('#states').val() != '')
+        {
+            var form_data = $(this).serialize();
+            $.ajax({
+                url:"/ajax_states_rainfall",
+                method:"POST",
+                data:form_data,
+                success:function(data)
+                {
+                  $('#subdivisions').html(data.subdivisions_list);
+                  $('#subdivisions').selectpicker('refresh');
+                }
+            })
+        }
+        else
+        {
+            alert("Please select State");
+            return false;
+        }
+    });
+
+    $('#multiple_select_form_subdivision').on('submit', function(event){
+        event.preventDefault();
+        if($('#subdivisions').val() != '')
+        {
+            var form_data = $(this).serialize();
+            $.ajax({
+                url:"/ajax_subdivisions_rainfall",
+                method:"POST",
+                data:form_data,
+                success:function(data)
+                {
+                  $('#years').html(data.years_list);
+                  $('#years').selectpicker('refresh');
+                }
+            })
+        }
+        else
+        {
+            alert("Please select subdivision");
+            return false;
+        }
+    });
+
+    $('#multiple_select_year').on('submit', function(event){
+        event.preventDefault();
+        if($('#years').val() != '')
+        {
+            var form_data = $(this).serialize();
+            $.ajax({
+                url:"/ajax_years_rainfall",
+                method:"POST",
+                data:form_data,
+                success:function(data)
+                {
+                }
+            })
+        }
+        else
+        {
+            alert("Please select Year");
+            return false;
+        }
+    });
+
+});
+</script>
+</body>
+</html>

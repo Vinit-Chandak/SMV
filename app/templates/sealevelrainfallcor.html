@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sealevel and Rainfall Correlation</title>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/css/bootstrap-select.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.2/js/bootstrap-select.min.js"></script>
+</head>
+
+<body>
+    <br /><br />
+    <div class="container">
+        <br />
+        <h2 align="center">Sealevel and Rainfall</h2>
+        <br />
+        <div class="col-md-4" style="margin-left:380px;">
+            <form method="post" id="multiple_select_form_state">
+                <label for="states">Select a State(s)</label>
+                <select name="states" id="states" class="form-control selectpicker" data-live-search="true" multiple>
+                    {% for state in all_states %}
+                    <option value="{{state}}">{{state}}</option>
+                    {% endfor %}
+                </select>
+                <br /><br />
+                <input type="hidden" name="selectedStates" id="selectedStates" />
+                <div style="margin-left:120px;">
+                    <input type="submit" name="submitstates" class="btn btn-info" value="Select States" />
+                </div>
+            </form>
+            <br /><br />
+            <div style="margin-left: 120px;">
+            </div>
+            </form>
+            <div id="plot-container"></div>
+            <br />
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            $('.selectpicker').selectpicker();
+
+            $('#states').change(function () {
+                $('#selectedStates').val($('#states').val());
+            });
+
+            $('#multiple_select_form_state').on('submit', function (event) {
+                event.preventDefault();
+                if ($('#states').val() != '') {
+                    var form_data = $(this).serialize();
+                    $.ajax({
+                        url: "/ajax_plot_state_rainfall_sealevel",
+                        method: "POST",
+                        data: form_data,
+                        success: function (data) {
+                            $('#plot-container').html(data.plot_div);
+                        }
+                    })
+                }
+                else {
+                    alert("Please select State");
+                    return false;
+                }
+            });
+
+
+            event.preventDefault();
+            if ($('#states').val() != '' && $('#years').val() != '') {
+                var form_data = {
+                    'selectedStates': $('#states').val().join(','),
+                    'selectedYears': $('#years').val().join(',')
+                };
+                $.ajax({
+                    url: "/ajax_plot_state_co2_avg_temp",
+                    method: "POST",
+                    data: form_data,
+                    success: function (data) {
+                        $('#plot-container').html(data.plot_div);
+                    }
+                });
+
+            }
+            else {
+                alert("Please select Year");
+                return false;
+            }
+        })
+    </script>
+</body>
+
+</html>
